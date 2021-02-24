@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.4)
 project(kmsgrab LANGUAGES C VERSION 0.1)
 
+include(GNUInstallDirs)
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(PNG QUIET libpng)
@@ -28,4 +29,8 @@ target_link_directories(kmsgrab PRIVATE
 target_link_libraries(kmsgrab PRIVATE
 	${PNG_LIBRARIES}
 	${DRM_LIBRARIES}
+)
+
+install(TARGETS kmsgrab
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
