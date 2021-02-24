@@ -147,18 +147,36 @@ out_free_picture:
 int main(int argc, char **argv)
 {
 	int err, drm_fd, prime_fd, retval = EXIT_FAILURE;
-	unsigned int i;
+	unsigned int i, card;
 	uint32_t fb_id;
 	drmModeRes *res;
 	drmModeCrtc *crtc;
 	drmModeFB *fb;
+	char buf[256];
+	uint64_t has_dumb;
 
-	if (argc < 3) {
-		printf("Usage: kmsgrab <card> <output.png>\n");
+	if (argc < 2) {
+		printf("Usage: kmsgrab <output.png>\n");
 		goto out_return;
 	}
 
-	drm_fd = open(argv[1], O_RDWR | O_CLOEXEC);
+	for (card = 0; ; card++) {
+		snprintf(buf, sizeof(buf), "/dev/dri/card%u", card);
+
+		drm_fd = open(buf, O_RDWR | O_CLOEXEC);
+		if (drm_fd < 0) {
+			fprintf(stderr, "Could not open KMS/DRM device.\n");
+			goto out_return;
+		}
+
+		if (drmGetCap(drm_fd, DRM_CAP_DUMB_BUFFER, &has_dumb) >= 0 &&
+		    has_dumb)
+			break;
+
+		close(drm_fd);
+	}
+
+	drm_fd = open(buf, O_RDWR | O_CLOEXEC);
 	if (drm_fd < 0) {
 		fprintf(stderr, "Could not open KMS/DRM device.\n");
 		goto out_return;
@@ -208,7 +226,7 @@ int main(int argc, char **argv)
 		goto out_free_fb;
 	}
 
-	err = save_png(fb, prime_fd, argv[2]);
+	err = save_png(fb, prime_fd, argv[1]);
 	if (err < 0) {
 		fprintf(stderr, "Failed to take screenshot: %s\n",
 			strerror(-err));
