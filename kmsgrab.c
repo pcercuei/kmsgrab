@@ -151,9 +151,9 @@ int main(int argc, char **argv)
 {
 	int err, drm_fd, prime_fd, retval = EXIT_FAILURE;
 	unsigned int i, card;
-	uint32_t fb_id;
-	drmModeRes *res;
-	drmModeCrtc *crtc;
+	uint32_t fb_id, crtc_id;
+	drmModePlaneRes *plane_res;
+	drmModePlane *plane;
 	drmModeFB *fb;
 	char buf[256];
 	uint64_t has_dumb;
@@ -195,23 +195,24 @@ int main(int argc, char **argv)
 		goto out_close_fd;
 	}
 
-	res = drmModeGetResources(drm_fd);
-	if (!res) {
-		fprintf(stderr, "Unable to get mode resources.\n");
+	plane_res = drmModeGetPlaneResources(drm_fd);
+	if (!plane_res) {
+		fprintf(stderr, "Unable to get plane resources.\n");
 		goto out_close_fd;
 	}
 
-	for (i = 0; i < res->count_crtcs; i++) {
-		crtc = drmModeGetCrtc(drm_fd, res->crtcs[i]);
-		fb_id = crtc->buffer_id;
-		drmModeFreeCrtc(crtc);
+	for (i = 0; i < plane_res->count_planes; i++) {
+		plane = drmModeGetPlane(drm_fd, plane_res->planes[i]);
+		fb_id = plane->fb_id;
+		crtc_id = plane->crtc_id;
+		drmModeFreePlane(plane);
 
-		if (fb_id != 0)
+		if (fb_id != 0 && crtc_id != 0)
 			break;
 	}
 
-	if (i == res->count_crtcs) {
-		fprintf(stderr, "No CRTC found\n");
+	if (i == plane_res->count_planes) {
+		fprintf(stderr, "No planes found\n");
 		goto out_free_resources;
 	}
 
@@ -243,7 +244,7 @@ out_close_prime_fd:
 out_free_fb:
 	drmModeFreeFB(fb);
 out_free_resources:
-	drmModeFreeResources(res);
+	drmModeFreePlaneResources(plane_res);
 out_close_fd:
 	close(drm_fd);
 out_return:
