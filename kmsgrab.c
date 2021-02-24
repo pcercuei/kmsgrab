@@ -85,6 +85,9 @@ static int save_png(drmModeFB *fb, int prime_fd, const char *png_fn)
 		goto out_free_picture;
 	}
 
+	/* Drop privileges, to write PNG with user rights */
+	seteuid(getuid());
+
 	pngfile = fopen(png_fn, "w+");
 	if (!pngfile) {
 		ret = -errno;
